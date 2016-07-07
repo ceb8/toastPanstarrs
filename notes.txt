@@ -1,0 +1,206 @@
+13 June
+
+https://confluence.stsci.edu/display/PSPS/PanSTARRS+Image+Cutout+Service
+
+Machine that has the panstarr servers mounted:
+plpsipp1v.stsci.edu
+
+my directory:
+ifs/missions/panstarrs/tmp/cbrasseur
+
+https://github.com/ChrisBeaumont/toasty
+
+22 June
+
+Some random fil locations:
+
+/data/ps1/node01/stps01.1/nebulous/53/41/2173317504.gpc1:ecliptic:20:00hr:o6094g0479o.500525:o6094g0479o.500525.wrp.440931.RINGS.V3.skycell.0870.0.b1.fits
+/data/ps1/node01/stps01.1/nebulous/53/41/6000801179.gpc1:LAP.PV3.20140730.bigmem:2015:01:26:RINGS.V3:skycell.2100.001:RINGS.V3.skycell.2100.001.stk.4271072.unconv.wt.fits
+/data/ps1/node01/stps01.1/nebulous/53/41/7987850043.gpc1:LAP.PV3.20140730.ipp:2014:10:30:RINGS.V3:skycell.2565.068:RINGS.V3.skycell.2565.068.stk.3708485.unconv.wt.fits
+
+/data/ps1/node01/stps01.1/nebulous/53/4e/6078528756.gpc1:LAP.PV3.20140730.bigmem:2015:02:03:RINGS.V3:skycell.1438.063:RINGS.V3.skycell.1438.063.stk.4343639.unconv.num.fits
+/data/ps1/node01/stps01.1/nebulous/53/4e/7998974750.gpc1:LAP.PV3.20140730.restack:2014:11:06:RINGS.V3:skycell.1289.034:RINGS.V3.skycell.1289.034.stk.3768102.unconv.mask.fits
+
+/data/ps1/node17/stps17.0/nebulous/30/15/5476614343.gpc1:LAP.PV3.20140730.ipp:2014:11:18:RINGS.V3:skycell.2568.000:RINGS.V3.skycell.2568.000.stk.3937514.unconv.fits
+/data/ps1/node17/stps17.0/nebulous/30/15/5697628854.gpc1:LAP.PV3.20140730.bigmem:2014:12:18:RINGS.V3:skycell.2542.026:RINGS.V3.skycell.2542.026.stk.4055312.unconv.expwt.fits
+/data/ps1/node17/stps17.0/nebulous/30/15/7133492860.gpc1:LAP.PV3.20140730:2014:12:03:RINGS.V3:skycell.0645.065:RINGS.V3.skycell.0645.065.stk.3988835.unconv.num.fits
+/data/ps1/node17/stps17.0/nebulous/30/15/7142332104.gpc1:LAP.PV3.20140730:2014:12:11:RINGS.V3:skycell.1681.074:RINGS.V3.skycell.1681.074.stk.4008152.unconv.num.fits
+/data/ps1/node17/stps17.0/nebulous/30/15/7211547299.gpc1:LAP.PV3.20140730:2015:02:26:RINGS.V3:skycell.1351.064:RINGS.V3.skycell.1351.064.stk.4583326.unconv.mask.fits
+
+OK, randomly selecting g as the freq band to start with :P
+
+Ideas: Can I load up all the footprints once and save them somewhere? (With associated file locations)
+       Let's see, there are 2644 * 100 skycells... that seems doable :P
+
+Test galactic coordinates (all should be in the skycell)
+101.9895°  59.7345°
+102.0321°  59.7683°
+102.0925°  59.7682°
+
+101.9950°  59.7562°
+102.0207°  59.7845°
+102.0682°  59.8000°
+
+101.9476°  59.7804°
+102.0205°  59.7851°
+102.0682°  59.8011°
+
+ok, but they're not... :P
+
+coordinates that should NOT be in the skycell
+102.1268°  59.3619°
+102.2145°  59.3938°
+
+102.0754°  59.3869°
+102.1653°  59.4176°
+
+
+l = np.array([[101.9895,102.0321,102.0925],[101.9950,102.0207,102.0682],[101.9476,102.0205,102.0682]])
+b = np.array([[59.7345,59.7683,59.7682],[59.7562,59.7845,59.8000],[59.7804,59.7851,59.8011]])
+
+l = np.array([[102.1268,102.2145],[102.0754,102.1653]])
+b = np.array([[59.3619,59.3938],[59.3869,59.4176]])
+
+Making a small array that is DEF within the footprint :P
+
+ (210.85302454, 53.97514527)
+ (210.86786876, 54.41257589)
+ (210.11835316, 54.41900608)
+ (210.11137897, 53.98147315)
+
+210.4 54.1
+210.5 54.1
+210.6 54.1
+
+210.4 54.2
+210.5 54.2
+210.6 54.2
+
+210.4 54.3
+210.5 54.3
+210.6 54.3
+
+l = np.array([[210.2,210.3,210.4],[210.2,210.3,210.4],[210.2,210.3,210.4]])
+b =  np.array([[54.1,54.1,54.1],[54.2,54.2,54.2],[54.3,54.3,54.3]])
+
+skyposes = SkyCoord(ra=l*u.degree,dec=b*u.degree)
+
+<SkyCoord (Galactic): (l, b) in deg
+    [[(102.36190451, 60.17075428), (102.2623215, 60.13941196),
+      (102.16301764, 60.10792511)],
+     [(102.46883844, 60.08611706), (102.36964899, 60.05493054),
+      (102.27073581, 60.02359996)],
+     [(102.57522439, 60.00139401), (102.47642819, 59.9703626),
+      (102.37790539, 59.93918761)]]>
+
+l =  np.array([[102.36190451,102.2623215,102.16301764],
+               [102.46883844,102.36964899,102.27073581],
+               [102.57522439,102.47642819,102.37790539]])
+b =  np.array([[60.17075428,60.13941196,60.10792511],
+               [60.08611706,60.05493054,60.02359996],
+               [60.00139401,59.9703626,59.93918761]])
+
+
+M101 RA and dec(decimal)
+210.79995 54.34410
+
+
+28 June
+
+OK, I can access all the fits files through my browser or wget or something, but it is way slow, so will def want to put script on the server for more direct file access.
+
+(so...probably talk to Bernie and/or Brian before doing the final toasting, about
+space stuff, but when toasting small sections, it shouldn't be a problem)
+
+(also will need to get footprints while on the server)
+
+
+29 June
+
+The sql search to use on twmastdb5/PSAdmin database:
+
+select s.SCn, s.SCm, s.fileNPath
+from stacks as s
+inner join dataProducts as d on s.fileExtID=d.fileExtID
+where  filter='r'
+and d.description='stack data image'
+and s.fileFoundOnDisk='T'
+order by scn, scm, filter
+
+
+To read in the result:
+
+from astropy.io import ascii
+
+psCells=ascii.read("filter_r_rings.rpt")
+
+* IMPORTANT: go to the end of the file and delete the (# rows affected) bit or data will not
+             be read in with proper datatypes
+
+5 July
+
+export PATH="/usr/local/anaconda3/bin:$PATH"
+export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
+python setup.py install --prefix=/home/cbrasseur/toasty/bin
+
+
+export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:/usr/local/anaconda3/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/home/cbrasseur/bin:/usr/local/mozilla:/usr/local/bin:."
+
+Figuring out what the $%#$@ is happening...
+
+
+First toast tile upper left coordinate:
+-4.67973102201e-05  0.981718582003
+ 6.28313850987      0.981718582003
+ 359.997318712      56.2483314184
+
+Skycell: [2404] , [5]
+
+[[  2.94450629e-02   5.59597828e+01]
+ [  2.97900053e-02   5.63975324e+01]
+ [  3.59242500e+02   5.63952277e+01]
+ [  3.59251270e+02   5.59575170e+01]]
+ 
+[<SkyCoord (ICRS): (ra, dec) in deg
+    (0.02944506, 55.95978279)>
+ <SkyCoord (ICRS): (ra, dec) in deg
+    (0.02979001, 56.39753241)>
+ <SkyCoord (ICRS): (ra, dec) in deg
+    (359.24249991, 56.39522772)>
+ <SkyCoord (ICRS): (ra, dec) in deg
+    (359.25127011, 55.95751697)>]
+
+OK, minmax is bad here... need some sort of if...
+
+
+if (footprint[0].ra - footpring[4].ra) > 0:
+   In this case all is well in the world and we may proceed as usual
+else:
+    Split into two sections
+
+OK, let's see if this is enough...
+
+Running:
+toastPanstarrs.py 8 toasts/ps1_M101 210.3,211 54,55.6
+on plpsipp1v took ~2min (woo!)
+
+Right, ok, so this was important (the around the circle stuff), but I should not have been running into it since I was doing  210.3 - 211..... need to sort that out :P
+
+
+Whooo boy.... why am I getting images near the circle crossover... did I screw something up in toasty?
+yuuuuuuup, fixed now though
+
+6 July
+
+commands I need on plpsipp1v:
+
+export PATH="/usr/local/anaconda3/bin:$PATH"
+export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
+python setup.py install --prefix=/home/cbrasseur/toasty/bin
+
+tar -czf layer8.tar.gz 8
+scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_M101/
+
+
+10x5 deg to depth 12 = 4.5 hours
+
