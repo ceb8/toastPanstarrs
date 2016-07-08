@@ -204,3 +204,31 @@ scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps
 
 10x5 deg to depth 12 = 4.5 hours
 
+psCells = ascii.read("filter_r_rings.rpt")
+psSC2FileLoc = np.full((max(psCells['SCn']) + 1,max(psCells['SCm']) + 1),"",dtype='<U168')
+psSC2FileLoc[psCells['SCn'],psCells['SCm']] = psCells['fileNPath']
+
+def getPoly(dataFle):
+    fitsFile = fits.open(dataFle)
+    dfWcs = wcs.WCS(fitsFile[1].header)
+    fp = dfWcs.calc_footprint(fitsFile[1].header)
+    print(fp[0,0],fp[0,1],fp[1,0],fp[1,1],fp[2,0],fp[2,1],fp[3,0],fp[3,1],fp[0,0],fp[0,1])
+    fitsFile.close()
+
+getPoly(psSC2FileLoc[2380][3])
+
+def getPoly(dataFle):
+    fitsFile = fits.open(dataFle)
+    dfWcs = wcs.WCS(fitsFile[1].header)
+    fp = dfWcs.calc_footprint(fitsFile[1].header)
+    fitsFile.close()
+    global id
+    id += 1
+    return '{"footprint":"POLYGON ICRS %.10f %.10f  %.10f %.10f  %.10f %.10f  %.10f %.10f  %.10f %.10f","_id_":"ext-record-%d"},'%(fp[0,0],fp[0,1],fp[1,0],fp[1,1],fp[2,0],fp[2,1],fp[3,0],fp[3,1],fp[0,0],fp[0,1],id)
+
+
+fpRows = []
+for x,y in cellCoords:
+    fpRows.append(getPoly(psSC2FileLoc[x][y]))
+
+[(206.5429879577,50.3595201623),(206.5664791519,50.7961226801),(205.8794164759,50.8091851629),(205.8622034902,50.3723833196),(206.5429879577,50.3595201623),(205.9143164944,50.3715393400),(205.9320104613,50.8083281017),(205.2444411176,50.8176647265),(205.2330391418,50.3807334322),(205.9143164944,50.3715393400),(207.1980720113,50.7472786723),(207.2278461919,51.1835492499),(206.5355714033,51.2005678173),(206.5121641688,50.7640388004),(207.1980720113,50.7472786723)]

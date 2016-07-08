@@ -39,71 +39,40 @@ def panstarrsSampler():
 
     def vec2Pix(raArr,decArr):
         
-        tile = np.zeros(raArr.shape) # this should be filled with whatever we want to signal "no data" 
-                                     # I am currently using zero
-        tileFill = np.full(raArr.shape,False,bool)
-
-        #print(raArr[0,0], decArr[0,0])
         raArr[raArr < 0] += 2 * np.pi # making all ras 0 - 2pi
         
-        minRa,maxRa = minmax(np.array([raArr[0][0],raArr[0][-1],raArr[-1][0],raArr[-1][-1]]))
-        minDec,maxDec = minmax(np.array([decArr[0][0],decArr[0][-1],decArr[-1][0],decArr[-1][-1]]))
-
-        while(False in tileFill):
-            inds = np.where(tileFill == False) # is there a better way to do this?
+        # Getting info about skycell and pixel location for given ra/decs
+        pixelInfoArray = pssc.findskycell(np.rad2deg(raArr), np.rad2deg(decArr))
             
-            # These 2 lines will need to be generalized away eventually
-            pc,sc = pssc.findskycell(np.rad2deg(raArr[inds[0][0],inds[1][0]]), 
-                                     np.rad2deg(decArr[inds[0][0],inds[1][0]]))
-            dataFle = psSC2FileLoc[pc[0],sc[0]]
-            #print(raArr[inds[0][0],inds[1][0]], decArr[inds[0][0],inds[1][0]])
-            #print(np.rad2deg(raArr[inds[0][0],inds[1][0]]), 
-            #      np.rad2deg(decArr[inds[0][0],inds[1][0]]))
+        # Getting the file paths and creating a unique list of them
+        fileLocByPix = psSC2FileLoc[pixelInfoArray['projcell'],pixelInfoArray['subcell']] 
+        filePths = np.unique(fileLocByPix)
+        
+        # Getting the pixel indices
+        pixIndX = np.rint(pixelInfoArray['x']).astype(int)
+        pixIndY = np.rint(pixelInfoArray['y']).astype(int)
             
-            if not dataFle:
-                tileFill[inds[0][0],inds[1][0]] = True
-                # Do I want to/ can I deal with the full footprint here?
+        tile = np.zeros(raArr.shape) # this should be filled with whatever we want to signal "no data" 
+                                     # I am currently using zero
+            
+        for dataFle in filePths:
+            if dataFle == '':
+                #print("File not available")
                 continue
             
-            print("Skycell:",pc,",",sc)
-            print("File location:",dataFle)
+            #print("File location:",dataFle)
             
-            # getting what we need out of the fits file
+            # getting the image data (will be rplaced by cache class)
             fitsFile = fits.open(dataFle)
-            dfWcs = wcs.WCS(fitsFile[1].header)
-            fp = dfWcs.calc_footprint(fitsFile[1].header)
-            footprint = np.array([SkyCoord(*x,frame='icrs',unit='deg') for x in  fp])
-            #print(fp)
-            #print(footprint)
             imgData = fitsFile[1].data
-            fitsFile.close()
+            fitsFile.close()      
+                
+            # getting the pixels we want out of this file
+            pix2Fill = (fileLocByPix == dataFle)
+            print("Number of pixels to be filled:",np.sum(pix2Fill))
+            tile[pix2Fill] = imgData[pixIndY[pix2Fill],pixIndX[pix2Fill]]   
             
-            # getting the edges, not the following code assumes the footprint is a rectangle aligned
-            # alont ra/dec lines, this might need to be altered for the general case 
-            # (galex can be the experiment for this) (might need to use the mask in the fits file?)
-            imMinRa,imMaxRa = minmax([x.ra.rad for x in footprint])
-            imMinDec,imMaxDec = minmax([x.dec.rad for x in footprint])
-
-            # There are problems if the ra interval crosses the circle boundary (e.g. 359 - 1)
-            # This should not happen with dec
-            # Check and account for that here
-            if (footprint[0].ra - footprint[3].ra) > 0:  
-                # this is what would need to be altered to take into account different footprint shapes
-                imMask = (raArr <= imMaxRa)  & (raArr >= imMinRa) 
-                imMask &= (decArr <= imMaxDec) & (decArr >= imMinDec)
-            else: # Crosses circle boundary
-                imMask = (raArr >= imMaxRa)  & (raArr <= 2*np.pi)
-                imMask |= ((raArr >= 0)  & (raArr <= imMinRa))
-                imMask &= (decArr <= imMaxDec) & (decArr >= imMinDec)
-        
-            ny, nx = imgData.shape[0:2]    
-            tile[imMask] = imgData[(ny*(decArr - imMinDec)/(imMaxDec - imMinDec)).astype(int)[imMask],
-                                   (nx*(1-(raArr - imMinRa)/(imMaxRa - imMinRa))).astype(int)[imMask]]
-            print("Number of pixels to be filled:",np.sum(imMask))
-            tileFill |= imMask # adding true everywhere we just filled
-            print()
-                                
-        return tile
+        return tile   
     
     return vec2Pix
 

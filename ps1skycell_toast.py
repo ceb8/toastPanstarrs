@@ -56,6 +56,7 @@ def _findskycell_array(ra, dec):
         # find dec zone where rings.dec_min <= dec < rings.dec_max
         idec = np.searchsorted(rings.field('dec_max'), dec)
         getfield = rings[idec].field
+        #print(getfield)
         nband = getfield('nband')
         # get normalized RA in range 0..360
         nra = ra % 360.0
@@ -69,6 +70,9 @@ def _findskycell_array(ra, dec):
 
         # use tangent project to get pixel offsets
         x, y = sky2xy_tan(nra, dec, ra_cen, dec_cen)
+        print(x)
+        print(y)
+        print()
 
         # compute the subcell from the pixel location
         pad = 480
@@ -83,7 +87,10 @@ def _findskycell_array(ra, dec):
         crpix2 = getfield('crpix2') + py*(5-j)
         ximage = x + crpix1
         yimage = y + crpix2
-
+        print(ximage)
+        print(yimage)
+        print()
+        
         # insert zeros where we are below lowest dec_min
         w = np.where(dec < dec_limit)
         projcell[w] = 0
