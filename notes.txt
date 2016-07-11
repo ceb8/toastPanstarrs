@@ -199,7 +199,7 @@ export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
 python setup.py install --prefix=/home/cbrasseur/toasty/bin
 
 tar -czf layer8.tar.gz 8
-scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_M101/
+Scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_M101/
 
 
 10x5 deg to depth 12 = 4.5 hours
@@ -232,3 +232,14 @@ for x,y in cellCoords:
     fpRows.append(getPoly(psSC2FileLoc[x][y]))
 
 [(206.5429879577,50.3595201623),(206.5664791519,50.7961226801),(205.8794164759,50.8091851629),(205.8622034902,50.3723833196),(206.5429879577,50.3595201623),(205.9143164944,50.3715393400),(205.9320104613,50.8083281017),(205.2444411176,50.8176647265),(205.2330391418,50.3807334322),(205.9143164944,50.3715393400),(207.1980720113,50.7472786723),(207.2278461919,51.1835492499),(206.5355714033,51.2005678173),(206.5121641688,50.7640388004),(207.1980720113,50.7472786723)]
+
+
+10x5 degrees depth 8 with Rick's code and no caching = 12.2 min
+
+1x1 degree depth 12 with Rick's code and no caching = 13.5 min
+Assuming linear scaling you get 11.5 hours for 10x5...bad...
+Hopefully not linear scaling.... also hopefully, caching will help
+
+
+Using caching with cache size of 50, 5x10 depth 12 takes 87 minutes
+=> ~52.5 days so MUCH better, but not yet perfect

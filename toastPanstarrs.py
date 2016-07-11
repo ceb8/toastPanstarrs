@@ -13,13 +13,45 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from toasty import toast, normalizer
-
 import ps1skycell_toast as pssc
 
+from collections import namedtuple
+import time
 
-def minmax(arr):
-    return [min(arr),max(arr)]
+Data = namedtuple('Data','img cnt')
 
+class fitsCache:
+    """"Caching for fitfile image data"""
+    def __init__(self,maxItems):
+        self.cache = {}
+        self.count = 0
+        self.maxItms = maxItems
+        
+    def remove(self,filename):
+        if filename not in self.cache:
+            return
+        del(self.cache[filename])
+    
+    def oldest(self):
+        return sorted([(y.cnt,x) for x,y in self.cache.items()])[0][1]
+    
+    def add(self,filename):
+        if len(self.cache) == self.maxItms:
+            self.remove(self.oldest())
+        #else:
+        #    print(len(self.cache))
+        fitsfile = fits.open(filename)
+        self.cache[filename] = Data(img=fitsfile[1].data,cnt=self.count)
+        fitsfile.close()
+        self.count += 1
+
+    def get(self,filename):
+        if filename not in self.cache:
+            self.add(filename)
+            #print(len(self.cache),filename)
+        return self.cache[filename].img 
+    
+psCache = fitsCache(50)
 
 def panstarrsSampler():
     
@@ -36,8 +68,10 @@ def panstarrsSampler():
     psSC2FileLoc[2381][42] = "RINGS.V3.skycell.2381.042.stk.3906380.unconv.fits"
     psSC2FileLoc[2381][43] = "RINGS.V3.skycell.2381.043.stk.3906381.unconv.fits"
     psSC2FileLoc[2381][44] = "RINGS.V3.skycell.2381.044.stk.3906382.unconv.fits"
-
+    
     def vec2Pix(raArr,decArr):
+
+        global psCache
         
         raArr[raArr < 0] += 2 * np.pi # making all ras 0 - 2pi
         
@@ -45,7 +79,7 @@ def panstarrsSampler():
         pixelInfoArray = pssc.findskycell(np.rad2deg(raArr), np.rad2deg(decArr))
             
         # Getting the file paths and creating a unique list of them
-        fileLocByPix = psSC2FileLoc[pixelInfoArray['projcell'],pixelInfoArray['subcell']] 
+        fileLocByPix = psSC2FileLoc[pixelInfoArray['projcell'],pixelInfoArray['subcell']]
         filePths = np.unique(fileLocByPix)
         
         # Getting the pixel indices
@@ -63,22 +97,23 @@ def panstarrsSampler():
             #print("File location:",dataFle)
             
             # getting the image data (will be rplaced by cache class)
-            fitsFile = fits.open(dataFle)
-            imgData = fitsFile[1].data
-            fitsFile.close()      
+            #fitsFile = fits.open(dataFle)
+            #imgData = fitsFile[1].data
+            #fitsFile.close() 
+            imgData = psCache.get(dataFle)
                 
             # getting the pixels we want out of this file
             pix2Fill = (fileLocByPix == dataFle)
-            print("Number of pixels to be filled:",np.sum(pix2Fill))
+            #print("Number of pixels to be filled:",np.sum(pix2Fill))
             tile[pix2Fill] = imgData[pixIndY[pix2Fill],pixIndX[pix2Fill]]   
             
-        return tile   
-    
+        return tile
+
     return vec2Pix
 
 
 def toast_panstarrs(depth, outputDir, raRange, decRange):
-    sampler = normalizer(panstarrsSampler(),-3,10)
+    sampler = normalizer(panstarrsSampler(),-3,12)
     toast(sampler, depth, outputDir, ra_range=raRange,dec_range=decRange)
     return
 
@@ -93,6 +128,10 @@ if __name__ == "__main__":
     outputDir = sys.argv[2]
     raRange = [float(x) for x in sys.argv[3].split(',')]
     decRange = [float(x) for x in sys.argv[4].split(',')]
+    start = time.time()
     toast_panstarrs(depth, outputDir, raRange, decRange)
+    end = time.time()
+    print(end - start)
 
-            
+
+           
