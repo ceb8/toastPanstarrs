@@ -5,7 +5,8 @@ C. Brasseur, took out database queries 2016 July 1
 """
 
 import sys, subprocess, os
-#import ps1extras
+#import panstarrsTrig as trig
+import numexpr as ne
 import numpy as np
 try:
         import astropy.io.fits as pyfits
@@ -18,7 +19,10 @@ pixscale = 0.25
 # read table of rings info from table in first extension of FITS file
 gridfits = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'ps1grid.fits')
 rings = pyfits.open(gridfits)[1].data
-dec_limit = rings.field('dec_min').min()
+dec_min = np.deg2rad(rings.field('dec_min'))
+dec_max = np.deg2rad(rings.field('dec_max'))
+dec_centers = np.deg2rad(rings.field('dec'))
+dec_limit = dec_min.min()
 
 def findskycell(ra, dec):
 
@@ -54,51 +58,51 @@ def _findskycell_array(ra, dec):
         """Internal function: ra and dec are known to be arrays"""
 
         # find dec zone where rings.dec_min <= dec < rings.dec_max
-        idec = np.searchsorted(rings.field('dec_max'), dec)
+        idec = np.searchsorted(dec_max, dec)
         getfield = rings[idec].field
-        #print(getfield)
         nband = getfield('nband')
+        
         # get normalized RA in range 0..360
-        nra = ra % 360.0
-        ira = np.rint(nra*nband/360.0).astype(int) % nband
+        #nra = ra % 360.0
+        # NOTE: THIS CHANGE MEANS THAT RA IS NORMALIZED IN PLACE
+        #       ALSO IT ASSUMES ANGLES IN RANGE -360:720
+        nra = ra
+        nra[nra < 0] += 2*np.pi
+        nra[nra > 2*np.pi] -= 2*np.pi
+        
+        ira = (nra*nband/(2*np.pi) + 0.5).astype(int) % nband
 
         projcell = getfield('projcell') + ira
-        dec_cen = getfield('dec')
-        ra_cen = ira*360.0/nband
+        dec_cen = dec_centers[idec] #getfield('dec')
+        ra_cen = ira*2*np.pi/nband
 
         # locate subcell within the projection cell
 
         # use tangent project to get pixel offsets
         x, y = sky2xy_tan(nra, dec, ra_cen, dec_cen)
-        print(x)
-        print(y)
-        print()
 
         # compute the subcell from the pixel location
         pad = 480
         px = getfield('xcell')-pad
         py = getfield('ycell')-pad
-        k = np.rint(4.5+x/px).astype(int).clip(0,9)
-        j = np.rint(4.5+y/py).astype(int).clip(0,9)
+        k = (4.5+x/px + 0.5).astype(int).clip(0,9)
+        j = (4.5+y/py + 0.5).astype(int).clip(0,9)
         subcell = 10*j + k
 
         # get pixel coordinates within the skycell image
         crpix1 = getfield('crpix1') + px*(5-k)
         crpix2 = getfield('crpix2') + py*(5-j)
-        ximage = x + crpix1
-        yimage = y + crpix2
-        print(ximage)
-        print(yimage)
-        print()
+        ximage = (x + crpix1 + 0.5).astype(int)
+        yimage = (y + crpix2 + 0.5).astype(int)
         
         # insert zeros where we are below lowest dec_min
-        w = np.where(dec < dec_limit)
-        projcell[w] = 0
-        subcell[w] = 0
-        crpix1[w] = 0
-        crpix2[w] = 0
-        ximage[w] = 0
-        yimage[w] = 0
+        #w = np.where(dec < dec_limit)
+        #projcell[w] = 0
+        #subcell[w] = 0
+        #crpix1[w] = 0
+        #crpix2[w] = 0
+        #ximage[w] = 0
+        #yimage[w] = 0
 
         # return a dictionary
         return {'ra': ra, 'dec': dec, 'projcell': projcell, 'subcell': subcell,
@@ -176,16 +180,16 @@ def _getskycell_center_array(projcell, subcell):
 
 def sky2xy_tan(ra, dec, ra_cen, dec_cen, crpix=(0.0,0.0)):
 
-        """Convert RA,Dec sky position (degrees) to X,Y pixel position
+        """Convert RA,Dec sky position (radians) to X,Y pixel position
 
-        ra[n], dec[n] are input arrays in degrees
-        ra_cen[n], dec_cen[n] are image centers in degrees
+        ra[n], dec[n] are input arrays in radians
+        ra_cen[n], dec_cen[n] are image centers in radians
         crpix is the reference pixel position (x,y)
         Returns tuple (x,y) where x and y are arrays with pixel position for each RA,Dec
         """
 
-        dtor = np.pi/180
-        cd00 = -pixscale*dtor/3600
+        #dtor = np.pi/180
+        cd00 = -pixscale*np.pi/(180*3600)
         cd01 = 0.0
         cd10 = 0.0
         cd11 = -cd00
@@ -195,20 +199,37 @@ def sky2xy_tan(ra, dec, ra_cen, dec_cen, crpix=(0.0,0.0)):
         cdinv10 = -cd10/determ
         cdinv11 =  cd00/determ
 
-        cos_crval1 = np.cos(dtor*dec_cen)
-        sin_crval1 = np.sin(dtor*dec_cen)
+        #cos_crval1 = np.cos(dtor*dec_cen)
+        #sin_crval1 = np.sin(dtor*dec_cen)
+        cos_crval1 = ne.evaluate('cos(dec_cen)')
+        sin_crval1 = ne.evaluate('sin(dec_cen)')
+        #cos_crval1 = trig.cos(dec_cen)
+        #sin_crval1 = trig.sin(dec_cen)
+        
+        radif = (ra - ra_cen)
+        radif[radif > np.pi] -= 2*np.pi
+        radif[radif < -np.pi] += 2*np.pi
+        
 
-        radif = (ra - ra_cen)*dtor
-        w = np.where(radif > np.pi)
-        radif[w] -= 2*np.pi
-        w = np.where(radif < -np.pi)
-        radif[w] += 2*np.pi
-
-        decrad = dec*dtor
-        cos_dec = np.cos(decrad)
-        sin_dec = np.sin(decrad)
-        cos_radif = np.cos(radif)
-        sin_radif = np.sin(radif)
+        #radif = (ra - ra_cen)
+        #radif[radif > 180] -= 360
+        #radif[radif < -180] += 360
+       
+        
+        #decrad = dec*dtor
+        #cos_dec = np.cos(decrad)
+        #sin_dec = np.sin(decrad)
+        cos_dec = ne.evaluate('cos(dec)')
+        sin_dec = ne.evaluate('sin(dec)')
+        #cos_dec = trig.cos(dec)
+        #sin_dec = trig.sin(dec)
+        #cos_radif = np.cos(radif)
+        #sin_radif = np.sin(radif)
+        cos_radif = ne.evaluate('cos(radif)')
+        sin_radif = ne.evaluate('sin(radif)')
+        #cos_radif = trig.cos(radif)
+        #sin_radif = trig.sin(radif)
+        
         h = sin_dec*sin_crval1 + cos_dec*cos_crval1*cos_radif
         xsi = cos_dec*sin_radif/h
         eta = (sin_dec*cos_crval1 - cos_dec*sin_crval1*cos_radif)/h

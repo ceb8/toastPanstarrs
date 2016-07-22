@@ -199,7 +199,7 @@ export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
 python setup.py install --prefix=/home/cbrasseur/toasty/bin
 
 tar -czf layer8.tar.gz 8
-Scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_M101/
+scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_M101/
 
 
 10x5 deg to depth 12 = 4.5 hours
@@ -243,3 +243,121 @@ Hopefully not linear scaling.... also hopefully, caching will help
 
 Using caching with cache size of 50, 5x10 depth 12 takes 87 minutes
 => ~52.5 days so MUCH better, but not yet perfect
+
+Offsets between file accesses:
+offsets = [69, 59, 116, 86, 87, 93, 59, 58, 52, 59, 56, 93, 56, 53, 53, 61, 53, 96, 57, 91, 87, 55, 54, 61, 51, 51, 95, 51, 51, 95, 53, 64, 89, 51, 53, 51, 51, 63, 116, 119, 82, 51, 65, 62, 51, 91]
+
+12 July
+
+OK, increased cache and now runs in 97 minutes (5845.664836406708), what gives!?  ARGH.
+I will talk to Tony tomorrow.
+
+Trying run with new method of uniquing filenames
+4244.57 sec = 70.7 min (cachesize = 50)
+
+Another run sans new uniquingm with cachesize 50 gave:
+6115.7 = 101.9 min (I don;t know why this is so much higher than my first run)
+
+sines[l90 ^ l180] = sineVals[(-((angles[l90 ^ l180]-90)*1000 + 1)).astype(int)]
+
+
+from top:
+Mem:  16333944k total, 16026924k used,   307020k free,     3304k buffers
+Swap:  2097148k total,  1439148k used,   658000k free,   481232k cached
+
+Mem:  16333944k total, 16020456k used,   313488k free,     1828k buffers
+Swap:  2097148k total,  1467804k used,   629344k free,   510740k cached
+
+Mem:  16333944k total, 16054916k used,   279028k free,     1080k buffers
+Swap:  2097148k total,   927000k used,  1170148k free,    58212k cached
+
+
+5403.8 = 90min adding in LUT
+
+
+optomized _mid:
+cdef void _mid(Point a, Point b, Point *cen):
+    """
+    Return the midpoint of two points on a great circle arc
+
+    Parameters
+    ----------
+    a, b: Point
+    Two lon, lat pairs, in radians
+    """
+    cdef DTYPE_t dl, bx, by, b3, l3, outb, outl
+    cdef Point out
+
+    dl = b.x - a.x
+    cosby = cos(b.y)
+    cosay = cos(a.y)
+    bx = cosby * cos(dl)
+    by = cosby * sin(dl)
+    outb = atan2(sin(a.y) + sin(b.y), hypot(cos(a.y) + bx, by))
+    outl = a.x + atan2(by, cosay + bx)
+    cen.x = outl
+    cen.y = outb
+
+
+
+In [12]: %timeit npsines = np.sin(tarr)
+1000 loops, best of 3: 674 µs per loop
+
+In [13]: %timeit nesines = ne.evaluate('sin(tarr)')
+1000 loops, best of 3: 243 µs per loop
+
+
+.001 full circle (no normalizing angle)
+
+In [15]: %timeit mysines = trig.sin(ras)
+The slowest run took 4.31 times longer than the fastest. This could mean that an intermediate result is being cached.
+10000 loops, best of 3: 158 µs per loop
+
+In [16]: %timeit mysines = trig.sin(ras)
+10000 loops, best of 3: 148 µs per loop
+
+.0001 quarter circle
+%timeit mysines = trig.sin(ras)
+1000 loops, best of 3: 1.03 ms per loop
+
+.0001 quarter circle (no normalizing angle)
+%timeit mysines = trig.sin(ras)
+1000 loops, best of 3: 943 µs per loop
+
+
+
+Looking at mid:
+
+In [61]: %timeit toasty.tile.mid(a,b)
+The slowest run took 17.07 times longer than the fastest. This could mean that an intermediate result is being cached.
+1000000 loops, best of 3: 322 ns per loop
+
+mine:
+%timeit mid(a,b)
+The slowest run took 5.27 times longer than the fastest. This could mean that an intermediate result is being cached.
+100000 loops, best of 3: 6.91 µs per loop
+
+(sooooper slow...)
+
+
+19 July:
+
+Trying 4 patches of the sky at once, chosen to highlight different possible issues in pixel scaling.
+
+270,280 -27,-22 # close to galactic plane
+205,215 52,57 # M101
+105,115 -12,-7 # sirius
+250,260 70,75 # dark(ish) patch of sky
+
+export PATH="/usr/local/anaconda3/bin:$PATH"
+export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
+
+nohup toastPanstarrs.py 12 toasts/ps1 270,275 -27,-22 > psOut_galPlane.txt &
+nohup toastPanstarrs.py 12 toasts/ps1 100,105 -18,-13 > psOut_sirius.txt & 
+nohup toastPanstarrs.py 12 toasts/ps1 205,210 52,57 > psOut_M101.txt &
+nohup toastPanstarrs.py 12 toasts/ps1 250,255 70,75 > psOut_dark.txt &
+
+nohup toastPanstarrs.py 12 toasts/ps1 275,280 -27,-22 > psOut_galPlane2.txt &
+nohup toastPanstarrs.py 12 toasts/ps1 105,110 -18,-13 > psOut_sirius2.txt &
+nohup toastPanstarrs.py 12 toasts/ps1 210,215 52,57 > psOut_M1012.txt &
+nohup toastPanstarrs.py 12 toasts/ps1 255,260 70,75 > psOut_dark2.txt &
