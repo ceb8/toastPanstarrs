@@ -34,9 +34,12 @@ class fitsCache:
     def add(self,filename):
         if len(self.cache) == self.maxItms:
             self.remove(self.oldest())
-        fitsfile = fits.open(filename)
-        self.cache[filename] = Data(img=fitsfile[1].data,cnt=self.count)
-        fitsfile.close()
+        try:
+            fitsfile = fits.open(filename)
+            self.cache[filename] = Data(img=fitsfile[1].data,cnt=self.count)
+            fitsfile.close()
+        except: # Any problem with opening or reading results in a null image
+            self.cache[filename] = Data(img=None,cnt=self.count)
         self.count += 1
 
     def get(self,filename):
@@ -61,6 +64,8 @@ def panstarrsSampler(filelocFile):
     psSC2FileLoc[2381][42] = "RINGS.V3.skycell.2381.042.stk.3906380.unconv.fits"
     psSC2FileLoc[2381][43] = "RINGS.V3.skycell.2381.043.stk.3906381.unconv.fits"
     psSC2FileLoc[2381][44] = "RINGS.V3.skycell.2381.044.stk.3906382.unconv.fits"
+
+    psSC2FileLoc[904][83] = "rings.v3.skycell.0904.083.stk.r.unconv.fits"
     
     def vec2Pix(raArr,decArr):
 
@@ -80,6 +85,9 @@ def panstarrsSampler(filelocFile):
             
         tile = np.zeros(raArr.shape) # this should be filled with whatever we want to signal "no data" 
                                      # I am currently using zero
+
+        if (len(filePths) == 1) and (not filePths[0]):
+            return None
             
         for dataFle in filePths:
             if dataFle == '':
@@ -87,35 +95,41 @@ def panstarrsSampler(filelocFile):
             
             # getting the image data 
             imgData = psCache.get(dataFle)
+
+            # file did not have any associated image data, probably the file was not found on disc
+            if imgData is None: 
+                continue
                 
             # getting the pixels we want out of this file
             pix2Fill = (fileLocByPix == dataFle)
-            tile[pix2Fill] = imgData[pixelInfoArray['y'][pix2Fill],pixelInfoArray['x'][pix2Fill]]   
+            tile[pix2Fill] = imgData[pixelInfoArray['y'][pix2Fill],pixelInfoArray['x'][pix2Fill]]
+
+            tile[np.isnan(tile)] = 10 # making nan values appear as white
             
         return tile
 
     return vec2Pix
 
 
-def toast_panstarrs(inputFile, depth, outputDir, skyRegion=None, tile=None):
-    sampler = normalizer(panstarrsSampler(inputFile),-2.267,9.001,scaling='sinh',bias=.193, contrast=3.723)
+def toast_panstarrs(inputFile, depth, outputDir, skyRegion=None, tile=None, restart=False):
+    sampler = normalizer(panstarrsSampler(inputFile),-2.267,9.001,scaling='sinh',bias=.22, contrast=3.723)
     if skyRegion:
-        toast(sampler, depth, outputDir, ra_range=skyRegion[0],dec_range=skyRegion[1])
+        toast(sampler, depth, outputDir, base_level_only=True, ra_range=skyRegion[0],dec_range=skyRegion[1],restart=restart)
     elif tile:
-        toast(sampler, depth, outputDir, toast_tile=tile)
+        toast(sampler, depth, outputDir, base_level_only=True, toast_tile=tile, restart=restart)
     else:
-        toast(sampler, depth, outputDir)
+        toast(sampler, depth, outputDir, base_level_only=True, restart=restart)
     return
 
 
 def usage():
-    print("toastPanstarrs.py -i <inputfile> -d <depth> -o <outputdirectory> [-l <rarange> -b <decrange>] [-t <tile>]")
+    print("toastPanstarrs.py -i <inputfile> -d <depth> -o <outputdirectory> [-l <rarange> -b <decrange>] [-t <tile>] [-r]")
 
 
 if __name__ == "__main__":
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:d:o:l:b:t:",["help","inputfile","depth=","outdir=","rarange=","decrange=","tile="])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:d:o:l:b:t:r",["help","inputfile","depth=","outdir=","rarange=","decrange=","tile=","restart"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -127,6 +141,7 @@ if __name__ == "__main__":
     raRange = None
     decRange = None
     toastTile = None
+    restart = False
     
     for opt, arg in opts:
         if opt in ('-h','--help'):
@@ -166,9 +181,11 @@ if __name__ == "__main__":
             except ValueError:
                 print("Toast tile must be of the form: depth,tx,ty")
                 sys.exit(2)
-            if len(decRange) != 3:
+            if len(toastTile) != 3:
                 print("Toast tile must be of the form: depth,tx,ty")
                 sys.exit(2)
+        if opt in ('-r','--restart'):
+            restart = True
 
 
     if not (depth and outputDir and inputFile):
@@ -191,14 +208,15 @@ if __name__ == "__main__":
         print("WARNING: You have not specified a section of the sky.")
         print("         The entire sky will be toasted.")
         print("         This is likely to take a very long time.")
+
                 
     start = time.time()
     if (raRange and decRange):
-        toast_panstarrs(inputFile, depth, outputDir, skyRegion=(raRange,decRange))
+        toast_panstarrs(inputFile, depth, outputDir, skyRegion=(raRange,decRange),restart=restart)
     elif toastTile:
-        toast_panstarrs(inputFile, depth, outputDir, tile=toastTile)
+        toast_panstarrs(inputFile, depth, outputDir, tile=toastTile,restart=restart)
     else:
-        toast_panstarrs(inputFile, depth, outputDir)
+        toast_panstarrs(inputFile, depth, outputDir,restart=restart)
     end = time.time()
     print(end - start)
 

@@ -198,6 +198,11 @@ export PATH="/usr/local/anaconda3/bin:$PATH"
 export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
 python setup.py install --prefix=/home/cbrasseur/toasty/bin
 
+
+/home/cbrasseur/toasty/bin/lib/python3.5/site-packages/
+
+
+
 tar -czf layer8.tar.gz 8
 scp layer8.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_M101/
 
@@ -361,3 +366,52 @@ nohup toastPanstarrs.py 12 toasts/ps1 275,280 -27,-22 > psOut_galPlane2.txt &
 nohup toastPanstarrs.py 12 toasts/ps1 105,110 -18,-13 > psOut_sirius2.txt &
 nohup toastPanstarrs.py 12 toasts/ps1 210,215 52,57 > psOut_M1012.txt &
 nohup toastPanstarrs.py 12 toasts/ps1 255,260 70,75 > psOut_dark2.txt &
+
+"filter_r_rings.rpt"
+
+22 July
+
+Rewrote toastPanstarrs.py to better handle command line arguments and be more flexible
+
+Small test:
+
+./toastPanstarrs.py -i filter_r_rings.rpt -d 12 -o toasts/ps1 -l 210.589,211 -b 54.26,54.45
+
+
+plpsipp1v commands:
+
+export PATH="/usr/local/anaconda3/bin:$PATH"
+export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
+
+nohup toastPanstarrs.py -i filter_r_rings.rpt -d 12 -o toasts/ps1 -l 270,275 -b -27,-22 > psOut_galPlane.txt &
+nohup toastPanstarrs.py -i filter_r_rings.rpt -d 12 -o toasts/ps1 -l 100,105 -b -18,-13 > psOut_sirius.txt & 
+nohup toastPanstarrs.py -i filter_r_rings.rpt -d 12 -o toasts/ps1 -l 205,210 -b 52,57 > psOut_M101.txt &
+nohup toastPanstarrs.py -i filter_r_rings.rpt -d 12 -o toasts/ps1 -l 250,255 -b 70,75 > psOut_dark.txt &
+
+tar -czf layer12.tar.gz 12
+scp layer12.tar.gz clara.stsci.edu:/Users/cbrasseur/Documents/panstarrs/toasts/ps1_plpsipp1v/
+
+
+runPSTOAST.sh filter_r_rings.rpt /internal/data1/surveys/ps_r
+
+4 August
+
+Trouble shooting the toasting:
+
+export PATH="/usr/local/anaconda3/bin:$PATH"
+export PYTHONPATH="/home/cbrasseur/toasty/bin/lib/python3.5/site-packages:$PATH"
+
+nohup toastPanstarrs.py -i filter_r_rings.rpt -d 12 -t 3,0,2 -o /internal/data1/surveys/ps_r &
+
+
+python setup.py install --prefix=/home/cbrasseur/toasty/bin
+
+
+toastPanstarrs.py -i filter_r_rings.rpt -d 12 -t 3,0,2 -o /internal/data1/surveys/ps_r -r
+
+toastPanstarrs.py -i filter_r_rings.rpt -d 12 -t 10,310,589 -o /internal/data1/surveys/ps_r -r
+
+toastPanstarrs.py -i filter_r_rings.rpt -d 12 -t 10,310,589 -o /internal/data1/colorizing/ps_r
+
+
+convert ps_r/12/2356/2356_1240.png ps_g/12/2356/2356_1240.png ps_i/12/2356/2356_1240.png -combine ps_color/12/2356/2356_1240.png

@@ -56,7 +56,7 @@ def findskycell(ra, dec):
 def _findskycell_array(ra, dec):
 
         """Internal function: ra and dec are known to be arrays"""
-
+        
         # find dec zone where rings.dec_min <= dec < rings.dec_max
         idec = np.searchsorted(dec_max, dec)
         getfield = rings[idec].field
@@ -96,13 +96,13 @@ def _findskycell_array(ra, dec):
         yimage = (y + crpix2 + 0.5).astype(int)
         
         # insert zeros where we are below lowest dec_min
-        #w = np.where(dec < dec_limit)
-        #projcell[w] = 0
-        #subcell[w] = 0
-        #crpix1[w] = 0
-        #crpix2[w] = 0
-        #ximage[w] = 0
-        #yimage[w] = 0
+        w = np.where(dec < dec_limit)
+        projcell[w] = 0
+        subcell[w] = 0
+        crpix1[w] = 0
+        crpix2[w] = 0
+        ximage[w] = 0
+        yimage[w] = 0
 
         # return a dictionary
         return {'ra': ra, 'dec': dec, 'projcell': projcell, 'subcell': subcell,
