@@ -4,25 +4,24 @@ import sys, getopt
 
 import numpy as np
 
+import time
+
 from toasty import toast
 
-def weightedMerge(mosaic):
-    subtile = (mosaic[::2, ::2] +
-               mosaic[1::2, ::2] +
-               mosaic[::2, 1::2] +
-               mosaic[1::2, 1::2])
-    extraBlack = (subtile < 1) # assumes that tile is greyscale and 0=black, 1=white
-    subtile[extraBlack] = subtile[extraBlack]/3 # throw out one black pixel (weighting towards white)
-    subtile[extraBlack] = subtile[extraBlack]/4
+from PIL import Image
 
-    return subtile
+# ditches the darkest pixel to help promote object up the merge stack
+def weightedMerge(mosaic):
+    subtile = Image.fromarray(mosaic)
+    subtile = subtile.resize((256,256))
+    return np.asarray(subtile)
 
 
 def usage():
     print("psMerge.py -b <base directory> -d <depth> [-l <top level> -t <tile>]")
 
 def psMerge(baseDir,depth, topLevel, toastTile):
-    toast(baseDir,depth,baseDir,top_layer=topLevel,toast_tile=toastTile) 
+    toast(baseDir,depth,baseDir,top_layer=topLevel,merge=weightedMerge,toast_tile=toastTile) 
 
 
     
@@ -70,10 +69,16 @@ if __name__ == "__main__":
 
     if not baseDir:
         print("Base directory containing base level of tile must be supplied for merge to run.")
+        usage()
         sys.exit(2)
 
     if not depth:
         print("Depth of base layer must be supplied.")
+        usage()
         sys.exit(2)        
 
+    start = time.time()
     psMerge(baseDir,depth,topLevel,toastTile)
+    end = time.time()
+    print(end-start)
+

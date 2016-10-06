@@ -59,8 +59,16 @@ def _findskycell_array(ra, dec):
         
         # find dec zone where rings.dec_min <= dec < rings.dec_max
         idec = np.searchsorted(dec_max, dec)
+
+        # special handling at pole where overlap is complicated
+	# do extra checks for top 2 rings
+	# always start with the ring just below the pole
+        nearpole = np.where(idec >= len(rings)-2)
+        idec[nearpole] = len(rings)-2
+        
         getfield = rings[idec].field
         nband = getfield('nband')
+
         
         # get normalized RA in range 0..360
         #nra = ra % 360.0
@@ -74,15 +82,41 @@ def _findskycell_array(ra, dec):
 
         projcell = getfield('projcell') + ira
         dec_cen = dec_centers[idec] #getfield('dec')
-        ra_cen = ira*2*np.pi/nband
+        ra_cen = ira*2*np.pi/nband      
 
         # locate subcell within the projection cell
 
         # use tangent project to get pixel offsets
         x, y = sky2xy_tan(nra, dec, ra_cen, dec_cen)
+         
+        pad = 480
+
+        if len(nearpole[0]) > 0:
+                # handle the points near the pole (if any)
+                # we know that this "ring" has only a single field
+                getfield2 = rings[-1].field
+                projcell2 = getfield2('projcell')
+                dec_cen2 = np.deg2rad(getfield2('dec'))
+                ra_cen2 = 0.0
+                x2, y2 = sky2xy_tan(nra[nearpole], dec[nearpole], ra_cen2, dec_cen2)
+                # compare x,y and x2,y2 to image sizes to select best image
+                # returns a Boolean array with true for values where 2nd image is better
+                use2 = poleselect(x[nearpole], y[nearpole], x2, y2, rings[-2], rings[-1], pad)
+                if use2.any():
+                        # slightly obscure syntax here makes this work even if ra, dec are multi-dimensional
+                        wuse2 = np.where(use2)[0]
+                        w2 = list(map(lambda x: x[wuse2], nearpole))
+                        idec[w2] = len(rings)-1
+                        getfield = rings[idec].field
+                        nband[w2] = 1
+                        ira[w2] = 0
+                        projcell[w2] = projcell2
+                        dec_cen[w2] = dec_cen2
+                        ra_cen[w2] = ra_cen2
+                        x[w2] = x2[wuse2]
+                        y[w2] = y2[wuse2]
 
         # compute the subcell from the pixel location
-        pad = 480
         px = getfield('xcell')-pad
         py = getfield('ycell')-pad
         k = (4.5+x/px + 0.5).astype(int).clip(0,9)
@@ -94,6 +128,16 @@ def _findskycell_array(ra, dec):
         crpix2 = getfield('crpix2') + py*(5-j)
         ximage = (x + crpix1 + 0.5).astype(int)
         yimage = (y + crpix2 + 0.5).astype(int)
+
+        # dealing with ra/decs that are being mapped to the wrong cell/subcell
+        #b = np.where((ximage > px) | (yimage > py) | (ximage < 0) | (yimage < 0))
+        #badVals = (projcell[b],subcell[b],ximage[b],yimage[b],ra[b],dec[b])
+        #projcell[b] = 0
+        #subcell[b] = 0
+        #crpix1[b] = 0
+        #crpix2[b] = 0
+        #ximage[b] = 0
+        #yimage[b] = 0
         
         # insert zeros where we are below lowest dec_min
         w = np.where(dec < dec_limit)
@@ -108,6 +152,25 @@ def _findskycell_array(ra, dec):
         return {'ra': ra, 'dec': dec, 'projcell': projcell, 'subcell': subcell,
                 'crval1': ra_cen, 'crval2': dec_cen, 'crpix1': crpix1, 'crpix2': crpix2,
                 'x': ximage, 'y': yimage}
+
+
+
+def poleselect(x1, y1, x2, y2, rings1, rings2, pad):
+
+	"""Compares x,y values from 2 images to determine which is best
+
+	Returns boolean array with True where x2,y2 is best
+	"""
+
+	nx1 = 10*(rings1['xcell']-pad)+pad
+	ny1 = 10*(rings1['ycell']-pad)+pad
+	nx2 = 10*(rings2['xcell']-pad)+pad
+	ny2 = 10*(rings2['ycell']-pad)+pad
+	# compute minimum distances to image edges
+	# note negative values are off edge
+	d1 = np.minimum(np.minimum(x1,nx1-1-x1), np.minimum(y1,ny1-1-y1))
+	d2 = np.minimum(np.minimum(x2,nx2-1-x2), np.minimum(y2,ny2-1-y2))
+	return (d1 < d2)
 
 
 def getskycell_center(projcell, subcell):
@@ -203,8 +266,6 @@ def sky2xy_tan(ra, dec, ra_cen, dec_cen, crpix=(0.0,0.0)):
         #sin_crval1 = np.sin(dtor*dec_cen)
         cos_crval1 = ne.evaluate('cos(dec_cen)')
         sin_crval1 = ne.evaluate('sin(dec_cen)')
-        #cos_crval1 = trig.cos(dec_cen)
-        #sin_crval1 = trig.sin(dec_cen)
         
         radif = (ra - ra_cen)
         radif[radif > np.pi] -= 2*np.pi
@@ -221,14 +282,10 @@ def sky2xy_tan(ra, dec, ra_cen, dec_cen, crpix=(0.0,0.0)):
         #sin_dec = np.sin(decrad)
         cos_dec = ne.evaluate('cos(dec)')
         sin_dec = ne.evaluate('sin(dec)')
-        #cos_dec = trig.cos(dec)
-        #sin_dec = trig.sin(dec)
         #cos_radif = np.cos(radif)
         #sin_radif = np.sin(radif)
         cos_radif = ne.evaluate('cos(radif)')
         sin_radif = ne.evaluate('sin(radif)')
-        #cos_radif = trig.cos(radif)
-        #sin_radif = trig.sin(radif)
         
         h = sin_dec*sin_crval1 + cos_dec*cos_crval1*cos_radif
         xsi = cos_dec*sin_radif/h
