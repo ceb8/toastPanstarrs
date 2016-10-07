@@ -6,7 +6,6 @@ import numpy as np
 
 from astropy.io import fits, ascii
 
-
 from toasty import toast
 from toasty.norm import normalize
 import ps1skycell_toast as pssc
@@ -16,7 +15,7 @@ import time
 
 Data = namedtuple('Data','img cnt')
 
-# can't figure out a better wat to deal with the problems getting array values gt or lt a scaler while ignoring the np.nans
+# Can't figure out a better way to deal with the problems getting array values gt or lt a scaler while ignoring the np.nans
 import warnings
 warnings.filterwarnings("ignore",category=RuntimeWarning,message="invalid value encountered in greater_equal")
 warnings.filterwarnings("ignore",category=RuntimeWarning,message="invalid value encountered in less_equal")
@@ -46,10 +45,9 @@ class fitsCache:
             
             # doing image processing here
             imean = np.nanmean(imgData)
-            vmax = (np.percentile(imgData[imgData >= imean],99.5) + 4.3) / 2  # produces warning cause nan, deal with later
-            vmin = (np.percentile(imgData[imgData <= imean],0.5) - 1.3) / 2 # produces warning cause nan, deal with later
-            #print(vmin,vmax)
-            imgData[np.isnan(imgData)] = vmax#np.max(imgData) 
+            vmax = (np.percentile(imgData[imgData >= imean],99.5) + 4.3) / 2  # produces warning because of nans, deal with later
+            vmin = (np.percentile(imgData[imgData <= imean],0.5) - 1.3) / 2 #produces warning because of nans, deal with later
+            imgData[np.isnan(imgData)] = vmax
             imgData = normalize(imgData,vmin,vmax,stretch='sinh')
             
             self.cache[filename] = Data(img=imgData,cnt=self.count)
@@ -125,7 +123,6 @@ def panstarrsSampler(filelocFile):
 
 
 def toast_panstarrs(inputFile, depth, outputDir, skyRegion=None, tile=None, restart=False):
-    #sampler = normalizer(panstarrsSampler(inputFile),-2.267,9.001,scaling='sinh',bias=.22, contrast=3.723)
     sampler = panstarrsSampler(inputFile)
     if skyRegion:
         toast(sampler, depth, outputDir, base_level_only=True, ra_range=skyRegion[0],dec_range=skyRegion[1],restart=restart)
@@ -207,17 +204,17 @@ if __name__ == "__main__":
         usage()
         sys.exit(2)
                 
-    # user has specifis both ra/dec and tile options
+    # The user has specified both ra/dec and tile options
     if (raRange or decRange) and toastTile:
-        print("You may specify either (raRage AND decRange) OR toastTile, but not both.")
+        print("You may specify either (raRange AND decRange) OR toastTile, but not both.")
         sys.exit(2)
 
-    # the user has specified exactly one of raRange or decRange
+    # The user has specified exactly one of raRange or decRange
     if (bool(raRange) ^ bool(decRange)):
-        print("You must specify both raRage AND decRange to use those options.")
+        print("You must specify both raRange AND decRange to use those options.")
         sys.exit(2)
 
-    # the user specifies no options for breaking up the sky
+    # The user specified no options for breaking up the sky
     if not (bool(raRange) + bool(decRange) + bool(toastTile)):
         print("WARNING: You have not specified a section of the sky.")
         print("         The entire sky will be toasted.")

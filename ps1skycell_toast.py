@@ -2,10 +2,10 @@
 
 R. White, 2015 November 25
 C. Brasseur, took out database queries 2016 July 1
+             altered to take RA/DEC in radians 2016 July
 """
 
 import sys, subprocess, os
-#import panstarrsTrig as trig
 import numexpr as ne
 import numpy as np
 try:
@@ -19,6 +19,8 @@ pixscale = 0.25
 # read table of rings info from table in first extension of FITS file
 gridfits = os.path.join(os.path.split(os.path.realpath(__file__))[0], 'ps1grid.fits')
 rings = pyfits.open(gridfits)[1].data
+
+# Turning degrees into radians as needed
 dec_min = np.deg2rad(rings.field('dec_min'))
 dec_max = np.deg2rad(rings.field('dec_max'))
 dec_centers = np.deg2rad(rings.field('dec'))
@@ -26,7 +28,7 @@ dec_limit = dec_min.min()
 
 def findskycell(ra, dec):
 
-        """Given input arrays RA, DEC (degrees), returns a dictionary with the skycell info
+        """Given input arrays RA, DEC (radians), returns a dictionary with the skycell info
 
         RA and Dec can be scalars or arrays.
         This returns just the best sky cell for each ra/dec(the one where the position is closest to the center).
@@ -70,10 +72,9 @@ def _findskycell_array(ra, dec):
         nband = getfield('nband')
 
         
-        # get normalized RA in range 0..360
-        #nra = ra % 360.0
-        # NOTE: THIS CHANGE MEANS THAT RA IS NORMALIZED IN PLACE
-        #       ALSO IT ASSUMES ANGLES IN RANGE -360:720
+        # get normalized RA in range 0..2pi
+        # NOTE: RA is normalized in place,
+        #       input RA angles are assumed to be in the range -2pi:4pi
         nra = ra
         nra[nra < 0] += 2*np.pi
         nra[nra > 2*np.pi] -= 2*np.pi
@@ -81,7 +82,7 @@ def _findskycell_array(ra, dec):
         ira = (nra*nband/(2*np.pi) + 0.5).astype(int) % nband
 
         projcell = getfield('projcell') + ira
-        dec_cen = dec_centers[idec] #getfield('dec')
+        dec_cen = dec_centers[idec] 
         ra_cen = ira*2*np.pi/nband      
 
         # locate subcell within the projection cell
@@ -128,17 +129,7 @@ def _findskycell_array(ra, dec):
         crpix2 = getfield('crpix2') + py*(5-j)
         ximage = (x + crpix1 + 0.5).astype(int)
         yimage = (y + crpix2 + 0.5).astype(int)
-
-        # dealing with ra/decs that are being mapped to the wrong cell/subcell
-        #b = np.where((ximage > px) | (yimage > py) | (ximage < 0) | (yimage < 0))
-        #badVals = (projcell[b],subcell[b],ximage[b],yimage[b],ra[b],dec[b])
-        #projcell[b] = 0
-        #subcell[b] = 0
-        #crpix1[b] = 0
-        #crpix2[b] = 0
-        #ximage[b] = 0
-        #yimage[b] = 0
-        
+  
         # insert zeros where we are below lowest dec_min
         w = np.where(dec < dec_limit)
         projcell[w] = 0
@@ -251,7 +242,6 @@ def sky2xy_tan(ra, dec, ra_cen, dec_cen, crpix=(0.0,0.0)):
         Returns tuple (x,y) where x and y are arrays with pixel position for each RA,Dec
         """
 
-        #dtor = np.pi/180
         cd00 = -pixscale*np.pi/(180*3600)
         cd01 = 0.0
         cd10 = 0.0
@@ -262,28 +252,15 @@ def sky2xy_tan(ra, dec, ra_cen, dec_cen, crpix=(0.0,0.0)):
         cdinv10 = -cd10/determ
         cdinv11 =  cd00/determ
 
-        #cos_crval1 = np.cos(dtor*dec_cen)
-        #sin_crval1 = np.sin(dtor*dec_cen)
         cos_crval1 = ne.evaluate('cos(dec_cen)')
         sin_crval1 = ne.evaluate('sin(dec_cen)')
         
         radif = (ra - ra_cen)
         radif[radif > np.pi] -= 2*np.pi
         radif[radif < -np.pi] += 2*np.pi
-        
 
-        #radif = (ra - ra_cen)
-        #radif[radif > 180] -= 360
-        #radif[radif < -180] += 360
-       
-        
-        #decrad = dec*dtor
-        #cos_dec = np.cos(decrad)
-        #sin_dec = np.sin(decrad)
         cos_dec = ne.evaluate('cos(dec)')
         sin_dec = ne.evaluate('sin(dec)')
-        #cos_radif = np.cos(radif)
-        #sin_radif = np.sin(radif)
         cos_radif = ne.evaluate('cos(radif)')
         sin_radif = ne.evaluate('sin(radif)')
         
@@ -324,18 +301,3 @@ def xy2sky_tan(x, y, ra_cen, dec_cen, crpix=(0.0,0.0)):
         dec = np.arctan2(eta*cos_crval1+sin_crval1, gamma)
         return (ra/dtor, dec/dtor)
 
-
-
-
-
-#if __name__ == "__main__":
-#       tdec = np.arange(31)*3.95 - 29.1
-#       tra = np.arange(31)*12.
-#       table = findskycell(tra,tdec)
-#       projcell = table['projcell']
-#       subcell = table['subcell']
-#       skycell2filenames(projcell, subcell, filetype="stack", doprint=True)
-#       skycell2filenames(projcell, subcell, filetype=["stack","warp"], doprint=True)
-        
-#       for i in range(len(tdec)):
-#               print "%11.6f %10.6f skycell.%4.4d.%3.3d" % (tra[i], tdec[i], projcell[i], subcell[i])

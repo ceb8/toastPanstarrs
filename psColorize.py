@@ -22,7 +22,7 @@ import time
 import warnings
 warnings.filterwarnings("ignore", ".* is a low contrast image")
 
-def colorize(depth,dirBase,outDir,txrange,tyrange,restart):
+def colorize(depth,dirBase,outDir,txrange,tyrange,restart = False):
     for tx,ty in product(range(*txrange),range(*tyrange)):
         pth = '/' + str(depth) + '/' + str(ty) + '/' + str(ty) + '_' + str(tx) + '.png'
 
@@ -54,7 +54,6 @@ def colorize(depth,dirBase,outDir,txrange,tyrange,restart):
         #Y = y.astype(np.float64)
         
         # bad pixels will be sturated in only one band (hopefully)
-        # hopefully mor efficient ellimination of bad pixels for 5 bands
         maxDif = 175
         PM = np.median(np.array([G,R,I,Z]), axis=0)
         g[((G - PM) > maxDif) & (g == 255)] = 0

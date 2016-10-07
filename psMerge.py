@@ -17,12 +17,12 @@ def weightedMerge(mosaic):
     return np.asarray(subtile)
 
 
-def usage():
-    print("psMerge.py -b <base directory> -d <depth> [-l <top level> -t <tile>]")
-
 def psMerge(baseDir,depth, topLevel, toastTile):
     toast(baseDir,depth,baseDir,top_layer=topLevel,merge=weightedMerge,toast_tile=toastTile) 
 
+    
+def usage():
+    print("psMerge.py -b <base directory> -d <depth> [-l <top level> -t <tile>]")
 
     
 if __name__ == "__main__":
