@@ -140,7 +140,7 @@ runPSMerge.sh baseDir
 where **baseDir** is as defined above.
 A complete depth 4-12 bottom TOAST tile-set is created.
 
-The downsampling algorithm used is nearest-neighbor.
+The downsampling algorithm used is cubic spline interpolation.
 
 
 ### Removing noise from PANSTARRS TOAST tile set (*psDenoise.py*)
@@ -178,6 +178,7 @@ runPSSmooth.sh baseDir depth
 ```
 
 where **baseDir** is the TOAST directory (de-speckling is done in place).
+
 Note: each layer must be de-speckled seperately (layer 12 is not touched).
 
 OpenCV's fastNlMeansDenoisingColored is used for the de-speckling.
