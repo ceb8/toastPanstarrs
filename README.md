@@ -6,7 +6,7 @@ Tessellated Octahedral Adaptive Subdivision Transform ([TOAST](http://www.worldw
 The goal of this project is to use the [PANSTARRS all-sky survey](http://pan-starrs.ifa.hawaii.edu) to create a set of TOAST tiles at depths 4-12 for use in Astroview. To that end Chris Beaumont's [toasty library](https://github.com/ChrisBeaumont/toasty) was modified to allow for toasting sections of the sky independently, and to separate the creation of the bottom layer (highest resolution) TOAST tiles, from  the resampling of that layer to produce each successive (lower resolution) layer of TOAST tiles.
 
 ### Requirements 
- * Python (code has only been tested with Python 3.5)
+ * Python (TOASTING and colorizing have only been tested with Python 3.5)
  * Our [Toasty](https://github.com/ceb8/toasty)
  * Access to panstarrs servers
  * Numpy
@@ -14,6 +14,7 @@ The goal of this project is to use the [PANSTARRS all-sky survey](http://pan-sta
  * Pillow/PIL
  * Numexpr
  * scikit-image
+ * OpenCV
 
 ### Assumptions
  * To create the TOASTed PANSTARRS visualization we used a 32 core VM with 140 GB of RAM and 12TB of disk space.
@@ -142,4 +143,41 @@ A complete depth 4-12 bottom TOAST tile-set is created.
 The downsampling algorithm used is nearest-neighbor.
 
 
+### Removing noise from PANSTARRS TOAST tile set (depth 4 to 11, bottom layer is left unchanged for maximum detail)
 
+This functionality was designed to despeckle colorized TOAST tiles.
+
+In a python interpreter:
+
+```python
+from psDenoise import despeckle
+
+despeckle(depth,inDir,outDir,txrange,tyrange,restart)
+```
+
+where
+ * **depth** is the TOAST layer that is have noise removed
+ * **inDir** is the directory containing the original (noisy) tiles
+ * **outDir** is the directory where the de-speckled TOAST tiles will go (can be the same as inDir)
+ * **txrange** and **tyrange** are the tile x and y ranges to be de-speckled in the form `min,max`
+ * **restart**  (optional) is a Boolean that indicates a restart job, where already existing images in outDir will not be recreated
+
+
+On the commendline:
+
+```
+psDenoise.py -i <input directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -r]
+```
+
+where the arguments are as above, except tile ranges are optional (in addition to the restart flag).
+
+
+Removing noise from the entire sky (64 processes) using the helper shell script:
+```
+runPSSmooth.sh baseDir depth
+```
+
+where **baseDir** is the TOAST directory (de-speckling is done in place).
+Note: each layer must be de-speckled seperately (layer 12 is not touched).
+
+OpenCV's fastNlMeansDenoisingColored is used for the de-speckling.
