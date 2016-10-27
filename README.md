@@ -65,7 +65,7 @@ Hyperbolic sine image normalization is applied with the following limits:
     contrast = 1
 ```
 
-### Colorizing PANSTARRS (psColorize.py)
+### Colorizing PANSTARRS (*psColorize.py*)
 
 Four bands, g,r,i, and z, are required for PANSTARRS colorization.
 
@@ -105,7 +105,7 @@ The colorizing algorithm used is:
     R = (i+z)/2
 ```
 
-### Merging PANSTARRS into a complete TOAST tile set (depth 4 to 12)
+### Merging PANSTARRS into a full TOAST tile set (*psMerge.py*)
 
 This functionality was designed for merging colorized TOAST tiles.
 
@@ -143,9 +143,9 @@ A complete depth 4-12 bottom TOAST tile-set is created.
 The downsampling algorithm used is nearest-neighbor.
 
 
-### Removing noise from PANSTARRS TOAST tile set (depth 4 to 11, bottom layer is left unchanged for maximum detail)
+### Removing noise from PANSTARRS TOAST tile set (*psDenoise.py*)
 
-This functionality was designed to despeckle colorized TOAST tiles.
+This functionality was designed to de-speckle colorized TOAST tiles.
 
 In a python interpreter:
 
