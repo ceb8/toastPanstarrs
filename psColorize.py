@@ -84,7 +84,7 @@ def usage():
 if __name__ == "__main__":
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hb:o:d:x:y:r",["help","baseDir=","depth=","txrange=","tyrange=","restart"])
+        opts, args = getopt.getopt(sys.argv[1:],"hb:o:d:x:y:r",["help","baseDir=","outDir","depth=","txrange=","tyrange=","restart"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
             sys.exit()
         if opt in ('-b','--baseDir'):
             dirBase = arg
-        if opt in ('-o','--outdir'):
+        if opt in ('-o','--outDir'):
             outDir = arg
         if opt in ('-d','--depth'):
             try:

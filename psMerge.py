@@ -10,10 +10,9 @@ from toasty import toast
 
 from PIL import Image
 
-# ditches the darkest pixel to help promote object up the merge stack
 def weightedMerge(mosaic):
     subtile = Image.fromarray(mosaic)
-    subtile = subtile.resize((256,256))
+    subtile = subtile.resize((256,256),Image.BILINEAR)
     return np.asarray(subtile)
 
 
