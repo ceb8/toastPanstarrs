@@ -12,7 +12,7 @@ from PIL import Image
 
 def weightedMerge(mosaic):
     subtile = Image.fromarray(mosaic)
-    subtile = subtile.resize((256,256),Image.BILINEAR)
+    subtile = subtile.resize((256,256),Image.BICUBIC)
     return np.asarray(subtile)
 
 

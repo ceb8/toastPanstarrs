@@ -4,63 +4,76 @@
 import sys, getopt,os
 
 import numpy as np
-import cv2
 
 import time
+import cv2
 
 from itertools import product
 
+from PIL import Image, ImageEnhance, ImageFilter
 
-# parameters for despeckling
-h=10
-hColor=10
-templateWindowSize = 7
-searchWindowSize = 21
+thresh = 40
 
 
-def despeckle(depth,inDir,outDir,txrange,tyrange,restart=False,inplace=False):
+def despeckle(depth,inDir,outDir,txrange,tyrange,
+              threshold=True,smooth=True,enhance=True,restart=False):
 
     for tx,ty in product(range(*txrange),range(*tyrange)):
         pth = '/' + str(depth) + '/' + str(ty) + '/' + str(ty) + '_' + str(tx) + '.png'
 
         # checking if the despeckled file already exists
-        if not inplace:
-            if os.path.isfile(outDir+pth):
-                if restart: 
-                    continue
-                else:
-                    os.remove(outDir+pth)
+        if os.path.isfile(outDir+pth) and restart:
+            continue
 
         # making sure the file to de-speckle exists
         if not os.path.isfile(inDir+pth): 
             continue
 
-        origImg = cv2.imread(inDir + pth)
-        
         try:
-            cleanImg = cv2.fastNlMeansDenoisingColored(origImg,None,h,hColor,templateWindowSize,searchWindowSize)
+            origImg = Image.open(inDir + pth)
         except:
-            print("Problem smoothing " + pth)
+            print("Problem with " + inDir + pth)
             continue
+            
+        if smooth == True:
+            cleanImg = origImg.filter(ImageFilter.SMOOTH)
+        else:
+            cleanImg = origImg 
+
+
+        if enhance == True:
+            brightness = ImageEnhance.Brightness(cleanImg)
+            cleanImg = brightness.enhance(1.1)
+        
+            contrast = ImageEnhance.Contrast(cleanImg)
+	    cleanImg = contrast.enhance(1.1)
+
+        if threshold == True:
+            try:
+                retval, cleanImg = cv2.threshold(np.array(cleanImg), thresh, 255, cv2.THRESH_TOZERO)
+                cleanImg = Image.fromarray(cleanImg)
+            except:
+                print("Problem thresholding " + inDir + pth)
 
         direc, _ = os.path.split(outDir+pth)
         if not os.path.exists(direc):
             os.makedirs(direc)
 
-        if not(cv2.imwrite(outDir+pth,cleanImg)):
-            print("Problem saving %s" % (outDir+pth))
-
+        try:
+            cleanImg.save(outDir+pth)
+        except:
+            print("Problem Saving " +outDir+pth)
 
 
 
 def usage():
-    print("psDenoise.py -i <input directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -r -p]")
+    print("psSmoothing.py -i <input directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -t -s -e -r]")
 
     
 if __name__ == "__main__":
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:o:d:x:y:rp",["help","inDir=","outDir","depth=","txrange=","tyrange=","restart","inplace"])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:o:d:x:y:tser",["help","inDir=","outDir","depth=","txrange=","tyrange=","threshold","smooth","enhance","restart"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -71,8 +84,10 @@ if __name__ == "__main__":
     depth = None
     txRange = None
     tyRange = None
+    threshold = False
+    smooth = False
+    enhance = False
     restart = False
-    inPlace = False
 
     for opt, arg in opts:
         if opt in ('-h','--help'):
@@ -106,11 +121,14 @@ if __name__ == "__main__":
             if len(tyRange) != 2:
                 print("Range must be of the form: min,max")
                 sys.exit(2)
+        if opt in ('-t','--threshold'):
+            threshold = True
+        if opt in ('-s','--smooth'):
+            smooth = True
+        if opt in ('-e','--enhance'):
+            enhance = True
         if opt in ('-r','--restart'):
             restart = True
-        if opt in ('-p','--inplace'):
-            inPlace = True
-        
 
     if not (inDir):
         print("Directory containing images to be de-speckled must be supplied.")
@@ -139,7 +157,7 @@ if __name__ == "__main__":
         print("This may take a while, please be patient, or start with a smaller section.")
 
     start = time.time()
-    despeckle(depth,inDir,outDir,txRange,tyRange,restart,inPlace)
+    despeckle(depth,inDir,outDir,txRange,tyRange,threshold,smooth,enhance,restart)
     end = time.time()
     print(end-start)
 
