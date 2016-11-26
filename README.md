@@ -105,9 +105,27 @@ The colorizing algorithm used is:
     R = (i+z)/2
 ```
 
-### Merging PANSTARRS into a full TOAST tile set (*psMerge.py*)
+### Merging PANSTARRS into a full TOAST tile set and smoothing images (*psMerge.py*)
 
-This functionality was designed for merging colorized TOAST tiles.
+This functionality was designed for merging and smoothing colorized TOAST tiles.
+
+Various algorithms for mergine and smoothing were tested and the following was determined to be the best:
+* Layers 11-10:
+  Bicubic resampling from the previous layer,
+  Application of a threshold of 40 (on values 0-255).
+* Layers 9-7
+  Bicubic resampling from the previous layer,
+  Smooth image (PIL SMOOTH image filter),
+  Increase brighness and contrast by 10%,
+  Application of a threshold of 40 (on values 0-255).
+* Layer 6
+  Nearest neighbor resampling from the previous layer,
+  Smooth image (PIL SMOOTH image filter),
+  Increase brighness and contrast by 10%,
+  Application of a threshold of 40 (on values 0-255).
+
+
+
 
 In a python interpreter:
 
