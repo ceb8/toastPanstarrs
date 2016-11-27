@@ -105,34 +105,39 @@ The colorizing algorithm used is:
     R = (i+z)/2
 ```
 
-### Merging PANSTARRS into a full TOAST tile set and smoothing images (*psMerge.py*)
+### Merging PANSTARRS into a full TOAST tile set and smoothing images (*psMergeBC.py*, *psMergeNN.py* and *psSmoothing.py*)
 
 This functionality was designed for merging and smoothing colorized TOAST tiles.
 
 Various algorithms for mergine and smoothing were tested and the following was determined to be the best:
-* Layers 11-10:
-  Bicubic resampling from the previous layer,
-  Application of a threshold of 40 (on values 0-255).
-* Layers 9-7
-  Bicubic resampling from the previous layer,
-  Smooth image (PIL SMOOTH image filter),
-  Increase brighness and contrast by 10%,
-  Application of a threshold of 40 (on values 0-255).
-* Layer 6
-  Nearest neighbor resampling from the previous layer,
-  Smooth image (PIL SMOOTH image filter),
-  Increase brighness and contrast by 10%,
-  Application of a threshold of 40 (on values 0-255).
-
-
+* Layers 11-10  
+  Bicubic resampling from the previous layer,  
+  Application of a threshold of 40 (on values 0-255).  
+* Layers 9-7  
+  Bicubic resampling from the previous layer,  
+  Smooth image (PIL SMOOTH image filter),  
+  Increase brighness and contrast by 10%,  
+  Application of a threshold of 40 (on values 0-255).  
+* Layer 6  
+  Nearest neighbor resampling from the previous layer,  
+  Smooth image (PIL SMOOTH image filter),  
+  Increase brighness and contrast by 10%,  
+  Application of a threshold of 40 (on values 0-255).  
+* Layers 5-4  
+  Nearest neighbor resampling from the previous layer,  
+  Increase brighness and contrast by 10%,  
+  Application of a threshold of 40 (on values 0-255).   
 
 
 In a python interpreter:
 
+Merging,
 ```python
-from psMerge import psMerge
+from psMergeBC import psMerge as bcMerge
+from psMergeNN import psMerge as nnMerge
 
-psMerge(baseDir,depth, topLevel, toastTile)
+bcMerge(baseDir,depth, topLevel, toastTile)
+bcMerge(baseDir,depth, topLevel, toastTile)
 ```
 
 where
@@ -141,62 +146,35 @@ where
  * **topLevel** is the topmost layer you want to merge to
  * **toastTile** is the tile to merge in the form depth,tx,ty
 
-On the commendline:
-
-```
-psMerge.py -b <base directory> -d <depth> [-l <top level> -t <tile>]
-```
-
-where the arguments are as above, except **top level** and **tile** are optional.
-
-
-Merging the entire sky (64 processes) using the helper shell script:
-```
-runPSMerge.sh baseDir
-```
-
-where **baseDir** is as defined above.
-A complete depth 4-12 bottom TOAST tile-set is created.
-
-The downsampling algorithm used is cubic spline interpolation.
-
-
-### Removing noise from PANSTARRS TOAST tile set (*psDenoise.py*)
-
-This functionality was designed to de-speckle colorized TOAST tiles.
-
-In a python interpreter:
-
+and smoothing
 ```python
-from psDenoise import despeckle
+from psSmoothing import despeckle
 
-despeckle(depth,inDir,outDir,txrange,tyrange,restart)
+despeckle(depth,inDir,outDir,txrange,tyrange,threshold,smooth,enhance,restart)
 ```
-
 where
  * **depth** is the TOAST layer that is have noise removed
  * **inDir** is the directory containing the original (noisy) tiles
  * **outDir** is the directory where the de-speckled TOAST tiles will go (can be the same as inDir)
  * **txrange** and **tyrange** are the tile x and y ranges to be de-speckled in the form `min,max`
+ * **threshold**  (optional) boolean, if True, a threshold of 40 will be applied to each image (default is True)
+ * **smooth**  (optional) boolean, if True, PIL's ImageFilter.SMOOTH will be applied to each image (default is True)
+ * **enhance**  (optional) boolean, if True, the brightness and contrast of each image will be increased by 10% (default is True)
  * **restart**  (optional) is a Boolean that indicates a restart job, where already existing images in outDir will not be recreated
 
 
 On the commendline:
 
 ```
-psDenoise.py -i <input directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -r]
+psMergeBC.py -b <base directory> -d <depth> [-l <top level> -t <tile>]
+psMergeBC.py -b <base directory> -d <depth> [-l <top level> -t <tile>]
+
+psSmoothing.py -i <input directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -s -e -t -r]
 ```
 
-where the arguments are as above, except tile ranges are optional (in addition to the restart flag).
+where the arguments are as above, except **top level** and **tile** are optional in the psMerge commands, and tile ranges (and flags) are optional in the smoothing command.
 
+Because each level must be smoothed before the next level is created from it, each layer must be individually merged, then smoothed, before the next layer can be begun.  This is less efficient than running the toast merge all at once, and then smoothing th images after, however it makes for a better final product.  
 
-Removing noise from the entire sky (64 processes) using the helper shell script:
-```
-runPSSmooth.sh baseDir depth
-```
+The shell script `runPSMergeAndSmooth.sh TOASTdir` contains all of the commands necessary to merge and smooth the TOAST tile set, however each section (separated by a wait command) depends on completion of the previous sections, so it may be preferable to split out the sections individually.
 
-where **baseDir** is the TOAST directory (de-speckling is done in place).
-
-Note: each layer must be de-speckled seperately (layer 12 is not touched).
-
-OpenCV's fastNlMeansDenoisingColored is used for the de-speckling.
