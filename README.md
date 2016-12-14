@@ -30,12 +30,12 @@ toast_panstarrs(inputFile, depth, outputDir, skyRegion, tile, restart)
 ```
 
 where
- * **inputFile** is a file containing skycell, projection cell, and file location (one of the filter_*_rings.rpt files)
- * **depth** is the bottom-most layer to be created (i.e. the number of recursive subdivisions, where 0 is the original octahedron)
- * **outputDir** is the directory in which the TOAST tiles will be saved
- * **skyRegion** (optional) is the region of the sky to be toasted in the form `([raMin,raMax],[decMin,decMax])` (degrees). This option cannot be used with the tile option.
- * **tile** (optional) is the TOAST tile to be toasted in the form `[depth,x,y]`. This option cannot be used with the skyRegion option.
- * **restart** (optional) is a Boolean, where `True` signals a restart job, so any tiles already existing in the outPut directory should not be recalculated.
+ * **inputFile** (string) is a file containing skycell, projection cell, and file location (one of the filter_*_rings.rpt files)
+ * **depth** (int) is the bottom-most layer to be created (i.e. the number of recursive subdivisions, where 0 is the original octahedron)
+ * **outputDir** (string) is the directory in which the TOAST tiles will be saved
+ * **skyRegion** (optional tuple) is the region of the sky to be toasted in the form `([raMin,raMax],[decMin,decMax])` (degrees). This option cannot be used with the tile option.
+ * **tile** (optional array) is the TOAST tile to be toasted in the form `[depth,x,y]`. This option cannot be used with the skyRegion option.
+ * **restart** (optional boolean) `True` signals a restart job, where any tiles already existing in the outPut directory should not be recalculated.
 
 
 From the command line:
@@ -76,11 +76,11 @@ from psColorize import colorize
 colorize(depth,dirBase,outDir,txrange,tyrange,restart)
 ```
 where
- * **depth** is the TOAST layer that is being colorized
- * **dirBase** is the path plus directory prefix containing the four band-pass TOASTs (all that should be needed to complete the band pass directories are the letters g,r,i, or z)
- * **outDir** is the directory where the colorized TOAST will go
- * **txrange** and **tyrange** are the tile x and y ranges to be colorized in the form `min,max`
- * **restart**  (optional) is a Boolean that indicates a restart job, where already existing images in the colorized directory will not be recreated
+ * **depth** (int) is the TOAST layer that is being colorized
+ * **dirBase** (string) is the path plus directory prefix containing the four band-pass TOASTs (all that should be needed to complete the band pass directories are the letters g,r,i, or z)
+ * **outDir** (string) is the directory where the colorized TOAST will go
+ * **txrange** and **tyrange** (array) are the tile x and y ranges to be colorized in the form `[min,max]`
+ * **restart**  (optional boolean) indicates a restart job, if `True` already existing images in the colorized directory will not be recreated
 
 On the command-line:
 
@@ -133,18 +133,17 @@ In a python interpreter:
 
 Merging,
 ```python
-from psMergeBC import psMerge as bcMerge
-from psMergeNN import psMerge as nnMerge
+from psMerge import psMerge 
 
-bcMerge(baseDir,depth, topLevel, toastTile)
-bcMerge(baseDir,depth, topLevel, toastTile)
+psMerge(baseDir,depth, topLevel, toastTile,bicubicMerge)
 ```
 
 where
- * **baseDir** is the directory that contains the TOASTed tiles (not the numbered TOAST directory the one above that)
- * **depth** is the depth of the bottommost layer you want to merge from
- * **topLevel** is the topmost layer you want to merge to
- * **toastTile** is the tile to merge in the form depth,tx,ty
+ * **baseDir** (string) is the directory that contains the TOASTed tiles (not the numbered TOAST directory the one above that)
+ * **depth** (int) is the depth of the bottommost layer you want to merge from
+ * **topLevel** (int) is the topmost layer you want to merge to
+ * **toastTile** (array) is the tile to merge in the form [depth,tx,ty]
+ * **bicubicMerge** (boolean) `True` indicated that bicubic merge will be used, otherwise nearest neighbor will be used
 
 and smoothing
 ```python
@@ -153,21 +152,20 @@ from psSmoothing import despeckle
 despeckle(depth,inDir,outDir,txrange,tyrange,threshold,smooth,enhance,restart)
 ```
 where
- * **depth** is the TOAST layer that is have noise removed
- * **inDir** is the directory containing the original (noisy) tiles
- * **outDir** is the directory where the de-speckled TOAST tiles will go (can be the same as inDir)
- * **txrange** and **tyrange** are the tile x and y ranges to be de-speckled in the form `min,max`
- * **threshold**  (optional) boolean, if True, a threshold of 40 will be applied to each image (default is True)
- * **smooth**  (optional) boolean, if True, PIL's ImageFilter.SMOOTH will be applied to each image (default is True)
- * **enhance**  (optional) boolean, if True, the brightness and contrast of each image will be increased by 10% (default is True)
- * **restart**  (optional) is a Boolean that indicates a restart job, where already existing images in outDir will not be recreated
+ * **depth** (int) is the TOAST layer that is have noise removed
+ * **inDir** (string) is the directory containing the original (noisy) tiles
+ * **outDir** (string) is the directory where the de-speckled TOAST tiles will go (can be the same as inDir)
+ * **txrange** and **tyrange** (array) are the tile x and y ranges to be de-speckled in the form `[min,max]`
+ * **threshold**  (optional boolean) `True` indicates that a threshold of 40 will be applied to each image (default is True)
+ * **smooth**  (optional boolean) `True` indicatez that PIL's ImageFilter.SMOOTH will be applied to each image (default is True)
+ * **enhance**  (optional boolean) `True` indicates that the brightness and contrast of each image will be increased by 10% (default is True)
+ * **restart**  (optional boolean) `True` indicates a restart job, where already existing images in outDir will not be recreated
 
 
 On the commendline:
 
 ```
-psMergeBC.py -b <base directory> -d <depth> [-l <top level> -t <tile>]
-psMergeBC.py -b <base directory> -d <depth> [-l <top level> -t <tile>]
+psMerge.py -b <base directory> -d <depth> [-l <top level> -t <tile> -c]
 
 psSmoothing.py -i <input directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -s -e -t -r]
 ```
