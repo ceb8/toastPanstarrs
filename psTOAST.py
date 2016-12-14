@@ -4,7 +4,7 @@ import sys, getopt
 
 import numpy as np
 
-from astropy.io import fits, ascii
+from astropy.io import fits, asciiq
 
 from toasty import toast
 from toasty.norm import normalize
@@ -21,21 +21,27 @@ warnings.filterwarnings("ignore",category=RuntimeWarning,message="invalid value 
 warnings.filterwarnings("ignore",category=RuntimeWarning,message="invalid value encountered in less_equal")
 
 class fitsCache:
-    """"Caching for fitfile image data"""
+    """"Caching fitsfile image data"""
     def __init__(self,maxItems):
+        """Sets up the cache, with maximum number of items set to maxItems"""
         self.cache = {}
         self.count = 0
         self.maxItms = maxItems
         
     def remove(self,filename):
+        """Removes the file 'filename' from the cache."""
         if filename not in self.cache:
             return
         del(self.cache[filename])
     
     def oldest(self):
+        """Returns the oldest item in the cache."""
         return sorted([(y.cnt,x) for x,y in self.cache.items()])[0][1]
     
     def add(self,filename):
+        """Adds the file 'filename' to the cache.  
+
+        Additionally normalizes the image with a sinh stretch, and min/max values that are the average of 0.5 percentile and -13/4.3"""
         if len(self.cache) == self.maxItms:
             self.remove(self.oldest())
         try:
@@ -57,6 +63,7 @@ class fitsCache:
         self.count += 1
 
     def get(self,filename):
+        """Adds the file 'filename' to the cache, and returns its image data.'"""
         if filename not in self.cache:
             self.add(filename)
         return self.cache[filename].img 
@@ -64,6 +71,20 @@ class fitsCache:
 psCache = fitsCache(10)
 
 def panstarrsSampler(filelocFile):
+    """
+    Build a sampler for panstarr images
+
+    Parameters
+    ----------
+    filelocFile: string
+      File that contains the panstarrs images file locations organized by skycell. 
+      File format is fixed-width table with columns 'SCn,' 'SCm,' and 'fileNPath.'
+
+    Returns
+    -------
+    A function which samples the panstarrs dataset, given arrays of (lon, lat).
+    """
+
     
     psCells = ascii.read(filelocFile)
     psSC2FileLoc = np.full((max(psCells['SCn']) + 1,max(psCells['SCm']) + 1),"",dtype='<U168')
@@ -75,15 +96,15 @@ def panstarrsSampler(filelocFile):
         
         # Getting info about skycell and pixel location for given ra/decs
         pixelInfoArray = pssc.findskycell(raArr, decArr)
-            
+        
         # Getting the file paths and creating a unique list of them
         fileLocByPix = psSC2FileLoc[pixelInfoArray['projcell'],pixelInfoArray['subcell']]
+
         filePths = {}
         for line in fileLocByPix:
             for filename in line:
                 filePths[filename] = filename
         filePths = list(filePths.keys())
-        
             
         tile = np.zeros(raArr.shape, dtype=np.uint8) # this should be filled with whatever we want to signal "no data" 
                                      # I am currently using zero
@@ -99,16 +120,17 @@ def panstarrsSampler(filelocFile):
             imgData = psCache.get(dataFle)
 
             # file did not have any associated image data, probably the file was not found on disc
-            if imgData is None: 
+            if imgData is None:
                 continue
                 
             # getting the pixels we want out of this file
             pix2Fill = (fileLocByPix == dataFle)
+            
             try:
                 ylen,xlen = imgData.shape
-                pix2Fill[pixelInfoArray['y'] > ylen] = False 
-                pix2Fill[pixelInfoArray['y'] < 0] = False 
-                pix2Fill[pixelInfoArray['x'] > xlen] = False
+                pix2Fill[pixelInfoArray['y'] > ylen - 1] = False
+                pix2Fill[pixelInfoArray['y'] < 0] = False
+                pix2Fill[pixelInfoArray['x'] > xlen - 1] = False
                 pix2Fill[pixelInfoArray['x'] < 0] = False
                 tile[pix2Fill] = imgData[pixelInfoArray['y'][pix2Fill],pixelInfoArray['x'][pix2Fill]]
             except IndexError:
@@ -116,13 +138,35 @@ def panstarrsSampler(filelocFile):
                 print(dataFle)
                 
             tile[np.isnan(tile)] = 10 # making nan values appear as white
-            
+
         return tile
 
     return vec2Pix
 
 
 def toast_panstarrs(inputFile, depth, outputDir, skyRegion=None, tile=None, restart=False):
+    """ 
+    Create a base layer of TOAST tile from the panstarrs dataset.
+
+    Parameters
+    ----------
+    inputFile: string
+      File that contains the panstarrs images file locations organized by skycell. 
+      File format is fixed-width table with columns 'SCn,' 'SCm,' and 'fileNPath.'
+    depth: int
+      The layer of TOAST tiles to be created (4**depth tiles will be created).
+    outputDir: string
+      The directory in which the TOAST tiles will be saved.
+    skyRegion: array (default None)
+      The region of the sky to be toasted in the form ([raMin,raMax],[decMin,decMax]) (degrees). 
+      This option cannot be used with the tile option.
+    tile: array  (default None)
+      The TOAST tile to be toasted in the form [depth,x,y] (it need not be at the same depth as the output layer). 
+      This option cannot be used with the skyRegion option.
+    restart: bool (default False)
+      True signals a restart job, so any tiles already existing in the outPut directory should not be recalculated.
+    """
+    
     sampler = panstarrsSampler(inputFile)
     if skyRegion:
         toast(sampler, depth, outputDir, base_level_only=True, ra_range=skyRegion[0],dec_range=skyRegion[1],restart=restart)
@@ -135,6 +179,27 @@ def toast_panstarrs(inputFile, depth, outputDir, skyRegion=None, tile=None, rest
 
 def usage():
     print("toastPanstarrs.py -i <inputfile> -d <depth> -o <outputdirectory> [-l <rarange> -b <decrange>] [-t <tile>] [-r]")
+    print("""
+    Create a base layer of TOAST tile from the panstarrs dataset.
+
+    Parameters
+    ----------
+    inputFile: string
+      File that contains the panstarrs images file locations organized by skycell. 
+      File format is fixed-width table with columns 'SCn,' 'SCm,' and 'fileNPath.'
+    depth: int
+      The layer of TOAST tiles to be created (4**depth tiles will be created).
+    outputDir: string
+      The directory in which the TOAST tiles will be saved.
+    skyRegion: array (default None)
+      The region of the sky to be toasted in the form ([raMin,raMax],[decMin,decMax]) (degrees). 
+      This option cannot be used with the tile option.
+    tile: array  (default None)
+      The TOAST tile to be toasted in the form [depth,x,y] (it need not be at the same depth as the output layer). 
+      This option cannot be used with the skyRegion option.
+    restart: bool (default False)
+      True signals a restart job, so any tiles already existing in the outPut directory should not be recalculated.
+    """)
 
 
 if __name__ == "__main__":

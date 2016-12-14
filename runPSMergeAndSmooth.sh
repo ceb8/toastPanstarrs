@@ -17,7 +17,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeBC.py -b $1 -d 12 -l 11 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 12 -l 11 -t 3,${TX},${TY} -c &
     done
 done
 
@@ -38,7 +38,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeBC.py -b $1 -d 11 -l 10 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 11 -l 10 -t 3,${TX},${TY} -c &
     done
 done
 
@@ -59,7 +59,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeBC.py -b $1 -d 10 -l 9 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 10 -l 9 -t 3,${TX},${TY} -c &
     done
 done
 
@@ -80,7 +80,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeBC.py -b $1 -d 9 -l 8 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 9 -l 8 -t 3,${TX},${TY} -c &
     done
 done
 
@@ -101,7 +101,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeBC.py -b $1 -d 8 -l 7 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 8 -l 7 -t 3,${TX},${TY} -c &
     done
 done
 
@@ -122,7 +122,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeNN.py -b $1 -d 7 -l 6 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 7 -l 6 -t 3,${TX},${TY} &
     done
 done
 
@@ -143,7 +143,7 @@ for ((TX=0; TX < 8; TX++))
 do
     for((TY=0; TY < 8; TY++))
     do
-        psMergeNN.py -b $1 -d 6 -l 5 -t 3,${TX},${TY} &
+        psMerge.py -b $1 -d 6 -l 5 -t 3,${TX},${TY} &
     done
 done
 

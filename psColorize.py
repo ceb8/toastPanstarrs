@@ -23,6 +23,27 @@ import warnings
 warnings.filterwarnings("ignore", ".* is a low contrast image")
 
 def colorize(depth,dirBase,outDir,txrange,tyrange,restart = False):
+    """
+    Colorizes 4 TOASTED wavebands (griz) into rgb images.
+    Colorizing algorithm 
+       B = (2g+r)/3      
+       G = (2r+i)/3     
+       R = (i+z)/2      
+
+    Parameters
+    ----------
+    depth: int
+      TOAST layer to be colorized
+    dirBase: string
+      waveband directory base, waveband directories should be of the form dirBase+'g'
+    outDir: string
+      directory in which the colorized tiles will be places 
+      (within numbered layer directory)
+    txrange/tyrange: array
+      x and y ranges of tiles to colorize in the form [min,max]
+    restart: boolean (default False)
+      If true, tiles which already exist in the colorized directory will no be re-colorized
+    """
     for tx,ty in product(range(*txrange),range(*tyrange)):
         pth = '/' + str(depth) + '/' + str(ty) + '/' + str(ty) + '_' + str(tx) + '.png'
 
@@ -79,6 +100,27 @@ def colorize(depth,dirBase,outDir,txrange,tyrange,restart = False):
 
 def usage():
     print("psColorize.py -b <base directory> -o <output directory> -d <depth> [-x <tile x range> -y <tile y range> -r]")
+    print("""
+    Colorizes 4 TOASTED wavebands (griz) into rgb images.
+    Colorizing algorithm 
+       B = (2g+r)/3      
+       G = (2r+i)/3     
+       R = (i+z)/2      
+
+    Parameters
+    ----------
+    depth: int
+      TOAST layer to be colorized
+    dirBase: string
+      waveband directory base, waveband directories should be of the form dirBase+'g'
+    outDir: string
+      directory in which the colorized tiles will be places 
+      (within numbered layer directory)
+    txrange/tyrange: array
+      x and y ranges of tiles to colorize in the form [min,max]
+    restart: boolean (default False)
+      If true, tiles which already exist in the colorized directory will no be re-colorized
+    """)
 
     
 if __name__ == "__main__":

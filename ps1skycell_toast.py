@@ -148,20 +148,22 @@ def _findskycell_array(ra, dec):
 
 def poleselect(x1, y1, x2, y2, rings1, rings2, pad):
 
-	"""Compares x,y values from 2 images to determine which is best
+        """Compares x,y values from 2 images to determine which is best
 
-	Returns boolean array with True where x2,y2 is best
-	"""
+        Returns boolean array with True where x2,y2 is best
+        """
 
-	nx1 = 10*(rings1['xcell']-pad)+pad
-	ny1 = 10*(rings1['ycell']-pad)+pad
-	nx2 = 10*(rings2['xcell']-pad)+pad
-	ny2 = 10*(rings2['ycell']-pad)+pad
-	# compute minimum distances to image edges
-	# note negative values are off edge
-	d1 = np.minimum(np.minimum(x1,nx1-1-x1), np.minimum(y1,ny1-1-y1))
-	d2 = np.minimum(np.minimum(x2,nx2-1-x2), np.minimum(y2,ny2-1-y2))
-	return (d1 < d2)
+        nx1 = 10*(rings1['xcell']-pad)+pad
+        ny1 = 10*(rings1['ycell']-pad)+pad
+        nx2 = 10*(rings2['xcell']-pad)+pad
+        ny2 = 10*(rings2['ycell']-pad)+pad
+        # compute minimum distances to image edges
+        # note negative values are off edge
+        d1 = np.minimum(np.minimum(x1+nx1/2,nx1/2-1-x1),
+                        np.minimum(y1+ny1/2,ny1/2-1-y1))
+        d2 = np.minimum(np.minimum(x2+nx2/2,nx2/2-1-x2),
+                        np.minimum(y2+ny2/2,ny2/2-1-y2))
+        return (d1 < d2)
 
 
 def getskycell_center(projcell, subcell):
